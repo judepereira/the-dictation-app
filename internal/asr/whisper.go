@@ -2,6 +2,7 @@ package asr
 
 import (
 	"context"
+	"dictation/internal/models"
 	"log"
 	"strings"
 	"sync"
@@ -15,7 +16,7 @@ func Run(ctx context.Context, cfg *config.Config, audioIn <-chan []float32, text
 	defer close(textOut)
 
 	ctxParams := whisper.DefaultContextParams()
-	model := whisper.Whisper_init_from_file_with_params(cfg.Model, ctxParams)
+	model := whisper.Whisper_init_from_file_with_params(models.Path(cfg.Model), ctxParams)
 	if model == nil {
 		log.Printf("ASR: failed to load model: %s", cfg.Model)
 		return
