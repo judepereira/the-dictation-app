@@ -52,6 +52,7 @@ static void backspace_n(int n) {
 */
 import "C"
 import (
+	"log"
 	"sync"
 	"unicode/utf16"
 )
@@ -64,10 +65,11 @@ var (
 )
 
 func TypeString(s string) {
+	log.Printf("Received: %s", s)
 	runes := []rune(s)
 
 	mu.Lock()
-	// Remove previously typed content
+
 	if prevRunes > 0 {
 		C.backspace_n(C.int(prevRunes))
 	}
@@ -75,10 +77,12 @@ func TypeString(s string) {
 	// Type the current full transcript
 	if len(runes) > 0 {
 		u := utf16.Encode(runes)
+		prevRunes = len(u)
 		C.type_utf16((*C.UniChar)(&u[0]), C.CFIndex(len(u)))
+	} else {
+		prevRunes = 0
 	}
 
-	prevRunes = len(runes)
 	mu.Unlock()
 }
 

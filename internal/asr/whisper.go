@@ -14,7 +14,6 @@ import (
 func Run(ctx context.Context, cfg *config.Config, audioIn <-chan []float32, textOut chan<- string) {
 	defer close(textOut)
 
-	// Initialize whisper model context.
 	ctxParams := whisper.DefaultContextParams()
 	model := whisper.Whisper_init_from_file_with_params(cfg.Model, ctxParams)
 	if model == nil {
@@ -23,19 +22,8 @@ func Run(ctx context.Context, cfg *config.Config, audioIn <-chan []float32, text
 	}
 	defer whisper.Whisper_free(model)
 
-	// Create a decoding state.
-	//state := whisper.Whisper_new_state(model)
-	//if state == nil {
-	//	log.Printf("ASR: failed to create decoding state")
-	//	return
-	//}
-	//defer whisper.Whisper_free_state(state)
-
-	// Prepare decoding parameters (set once, reuse).
 	full := whisper.DefaultFullParams(whisper.SAMPLING_GREEDY)
 	full.SetTranslate(false)
-	// full.SetNoContext(false)
-	// full.SetSingleSegment(false)
 	if cfg.Language != "" && cfg.Language != "auto" {
 		full.SetLanguage(cfg.Language)
 	}
@@ -43,7 +31,7 @@ func Run(ctx context.Context, cfg *config.Config, audioIn <-chan []float32, text
 	// Keep a rolling window of audio to provide context for streaming updates.
 	const (
 		sampleRate = 16000           // expected by Whisper
-		windowSec  = 30              // rolling window duration
+		windowSec  = 60              // rolling window duration
 		maxSamples = sampleRate * 30 // 30 seconds
 	)
 	_ = windowSec // retained for clarity if you adjust the window elsewhere
@@ -59,7 +47,7 @@ func Run(ctx context.Context, cfg *config.Config, audioIn <-chan []float32, text
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		ticker := time.NewTicker(750 * time.Millisecond)
+		ticker := time.NewTicker(1000 * time.Millisecond)
 		defer ticker.Stop()
 
 		for {
@@ -82,19 +70,21 @@ func Run(ctx context.Context, cfg *config.Config, audioIn <-chan []float32, text
 					continue
 				}
 
-				// Collect concatenated text across segments.
-
 				var b strings.Builder
 				n := model.NumSegments()
 				for i := 0; i < n; i++ {
-					b.WriteString(model.Segment(i).Text)
+					text := strings.TrimSpace(model.Segment(i).Text)
+					if text[:1] == "[" {
+						samples = samples[0:]
+						continue
+					}
+					b.WriteString(text + " ")
 				}
-				curr := strings.TrimSpace(b.String())
+				curr := strings.TrimSpace(b.String()) + " "
 
-				// Compute incremental suffix and send to output.
-				if suf := Suffix(prev, curr); suf != "" {
+				if prev != curr {
 					select {
-					case textOut <- suf:
+					case textOut <- curr:
 						prev = curr
 					case <-ctx.Done():
 						return
@@ -104,7 +94,6 @@ func Run(ctx context.Context, cfg *config.Config, audioIn <-chan []float32, text
 		}
 	}()
 
-	// Collect audio samples and maintain a rolling window buffer.
 	for {
 		select {
 		case <-ctx.Done():
@@ -121,7 +110,6 @@ func Run(ctx context.Context, cfg *config.Config, audioIn <-chan []float32, text
 
 			mu.Lock()
 			if len(samples)+len(chunk) > maxSamples {
-				// Drop the oldest samples to keep within the rolling window.
 				drop := len(samples) + len(chunk) - maxSamples
 				if drop > len(samples) {
 					drop = len(samples)
@@ -133,15 +121,4 @@ func Run(ctx context.Context, cfg *config.Config, audioIn <-chan []float32, text
 			mu.Unlock()
 		}
 	}
-}
-
-func Suffix(prev, curr string) string {
-	if len(curr) < len(prev) {
-		return curr
-	}
-	i := 0
-	for i < len(prev) && i < len(curr) && prev[i] == curr[i] {
-		i++
-	}
-	return curr[i:]
 }

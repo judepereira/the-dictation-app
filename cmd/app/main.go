@@ -46,15 +46,10 @@ func main() {
 				textCh := make(chan string, 8)
 				keyout.Start()
 				go audio.Capture(audioCtx, audioCh)
-				go asr.Run(ctx, cfg, audioCh, textCh)
+				go asr.Run(audioCtx, cfg, audioCh, textCh)
 				go func() {
-					var last string
 					for t := range textCh {
-						suffix := asr.Suffix(last, t)
-						if suffix != "" && cfg.AutoType {
-							keyout.TypeString(suffix)
-						}
-						last = t
+						keyout.TypeString(t)
 					}
 				}()
 			} else if !toggle && capturing.Swap(false) {
