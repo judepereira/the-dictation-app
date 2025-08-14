@@ -17,13 +17,14 @@ plutil -convert xml1 -o ${ROOT_DIR}/Contents/Info.plist Info.plist
 
 #codesign --deep --force --options runtime \
 #  --entitlements entitlements.plist \
-#  -s "Developer ID Application: Your Name (TEAMID)" \
+#  -s "Apple Development: Jude Pereira (${TEAM_ID})" \
 #  ${ROOT_DIR}
 
-#xcrun notarytool submit Dictation.app --keychain-profile "notaryprofile" --wait
-#xcrun stapler staple Dictation.app
+DMG="build/TheDictationApp.dmg"
 
+hdiutil create -volname "The Dictation App" -srcfolder ${ROOT_DIR} -ov -format UDZO ${DMG}
 
-hdiutil create -volname "The Dictation App" -srcfolder ${ROOT_DIR} -ov -format UDZO build/TheDictationApp.dmg
+#xcrun notarytool submit ${DMG} --keychain-profile "notaryprofile" --wait
+#xcrun stapler staple ${DMG}
 
 echo "Build complete!"
