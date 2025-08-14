@@ -30,16 +30,64 @@ static void type_utf16(const UniChar *buf, CFIndex len) {
   CGEventPost(kCGHIDEventTap, up);
   CFRelease(up);
 }
+
+// Backspace key virtual code on macOS
+#define KEY_BACKSPACE ((CGKeyCode)0x33)
+
+static void press_key(CGKeyCode code) {
+  CGEventRef down = CGEventCreateKeyboardEvent(NULL, code, true);
+  CGEventPost(kCGHIDEventTap, down);
+  CFRelease(down);
+
+  CGEventRef up = CGEventCreateKeyboardEvent(NULL, code, false);
+  CGEventPost(kCGHIDEventTap, up);
+  CFRelease(up);
+}
+
+static void backspace_n(int n) {
+  for (int i = 0; i < n; i++) {
+    press_key(KEY_BACKSPACE);
+  }
+}
 */
 import "C"
-import "unicode/utf16"
+import (
+	"sync"
+	"unicode/utf16"
+)
 
 func EnsureAccessibility() bool { return bool(C.ensureAccessibility()) }
 
+var (
+	mu        sync.Mutex
+	prevRunes int
+)
+
 func TypeString(s string) {
-	u := utf16.Encode([]rune(s))
-	if len(u) == 0 {
-		return
+	runes := []rune(s)
+
+	mu.Lock()
+	// Remove previously typed content
+	if prevRunes > 0 {
+		C.backspace_n(C.int(prevRunes))
 	}
-	C.type_utf16((*C.UniChar)(&u[0]), C.CFIndex(len(u)))
+
+	// Type the current full transcript
+	if len(runes) > 0 {
+		u := utf16.Encode(runes)
+		C.type_utf16((*C.UniChar)(&u[0]), C.CFIndex(len(u)))
+	}
+
+	prevRunes = len(runes)
+	mu.Unlock()
+}
+
+func Stop() {
+	mu.Lock()
+	prevRunes = 0
+	mu.Unlock()
+}
+
+func Start() {
+	Stop()
 }

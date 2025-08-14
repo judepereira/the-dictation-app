@@ -44,6 +44,7 @@ func main() {
 				audioCtx, audioCancel = context.WithCancel(ctx)
 				audioCh := make(chan []float32, 8)
 				textCh := make(chan string, 8)
+				keyout.Start()
 				go audio.Capture(audioCtx, audioCh)
 				go asr.Run(ctx, cfg, audioCh, textCh)
 				go func() {
@@ -58,6 +59,7 @@ func main() {
 				}()
 			} else if !toggle && capturing.Swap(false) {
 				audioCancel()
+				keyout.Stop()
 			}
 		}
 	}()
