@@ -1,6 +1,7 @@
 // cmd/app/main.go
 package main
 
+import "C"
 import (
 	"context"
 	"log"
@@ -19,7 +20,6 @@ import (
 
 func main() {
 	cfg, _ := config.Load()
-	ui.StartTray(cfg)
 
 	if models.Missing(cfg.Model) {
 		ui.ShowSetup()
@@ -63,6 +63,8 @@ func main() {
 			}
 		}
 	}()
+
+	ui.StartTray(cfg)
 
 	<-ctx.Done()
 	ui.StopTray()
