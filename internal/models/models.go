@@ -1,4 +1,3 @@
-// internal/models/models.go
 package models
 
 import (
@@ -8,7 +7,7 @@ import (
 
 func Dir() string {
 	home, _ := os.UserHomeDir()
-	return filepath.Join(home, "Library", "Application Support", "DictationApp", "models")
+	return filepath.Join(home, "Library", "Application Support", "TheDictationApp", "models")
 }
 
 func Path(name string) string { return filepath.Join(Dir(), name+".bin") }

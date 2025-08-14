@@ -22,7 +22,6 @@ func StartTray(cfg *config.Config) {
 			log.Printf("Failed to load tray icon: %v", err)
 		}
 
-		systray.SetTitle("Dictation")
 		systray.SetTooltip("Dictation is running")
 
 		statusModel := systray.AddMenuItem("Model: "+cfg.Model, "")
@@ -32,7 +31,6 @@ func StartTray(cfg *config.Config) {
 
 		systray.AddSeparator()
 
-		itemSetup := systray.AddMenuItem("Setup…", "Open first-time setup")
 		itemAbout := systray.AddMenuItem("About", "About this app")
 
 		systray.AddSeparator()
@@ -42,8 +40,6 @@ func StartTray(cfg *config.Config) {
 		go func() {
 			for {
 				select {
-				case <-itemSetup.ClickedCh:
-					ShowSetup()
 				case <-itemAbout.ClickedCh:
 					ShowAbout()
 				case <-itemQuit.ClickedCh:
@@ -65,5 +61,3 @@ func StartTray(cfg *config.Config) {
 func StopTray() { systray.Quit() }
 
 func ShowAbout() { showAboutNative() }
-
-func ShowSetup() { showSetupNative() }

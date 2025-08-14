@@ -4,26 +4,23 @@ package main
 import "C"
 import (
 	"context"
+	"dictation/internal/models"
 	"log"
 	"os/signal"
 	"sync/atomic"
 	"syscall"
+	"time"
 
 	"dictation/internal/asr"
 	"dictation/internal/audio"
 	"dictation/internal/config"
 	"dictation/internal/hotkey"
 	"dictation/internal/keyout"
-	"dictation/internal/models"
 	"dictation/internal/ui"
 )
 
 func main() {
 	cfg, _ := config.Load()
-
-	if models.Missing(cfg.Model) {
-		ui.ShowSetup()
-	}
 
 	if !keyout.EnsureAccessibility() {
 		log.Println("Accessibility not granted.")
@@ -31,6 +28,17 @@ func main() {
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
+
+	if models.Missing(cfg.Model) {
+		err := InstallModel(ctx,
+			"https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-"+cfg.Model+".bin",
+			models.Path(cfg.Model))
+
+		if err != nil {
+			log.Printf("Failed to install model: %v", err)
+			return
+		}
+	}
 
 	toggleCh := make(chan bool, 1)
 
@@ -63,4 +71,11 @@ func main() {
 
 	<-ctx.Done()
 	ui.StopTray()
+}
+
+func InstallModel(ctx context.Context, url, dst string) error {
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Minute)
+	defer cancel()
+
+	return ui.DownloadFileWithProgress(ctx, url, dst)
 }

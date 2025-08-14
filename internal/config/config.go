@@ -19,11 +19,11 @@ type Config struct {
 
 func path() string {
 	dir, _ := os.UserConfigDir()
-	return filepath.Join(dir, "DictationApp", "config.json")
+	return filepath.Join(dir, "TheDictationApp", "config.json")
 }
 
 func defaultConfig() *Config {
-	return &Config{Model: "/Users/jude/developer/whisper.cpp/models/ggml-base.en.bin", Language: "en", AutoType: true, HotkeyWindowMs: 300, VADEnabled: true, Version: "0.1.0"}
+	return &Config{Model: "base.en", Language: "en", AutoType: true, HotkeyWindowMs: 300, VADEnabled: true, Version: "1.0.0"}
 }
 
 func Load() (*Config, error) {
